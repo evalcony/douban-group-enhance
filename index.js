@@ -130,6 +130,19 @@
       }
     }
 
+    // filt author
+    const runFiltAuthor = (config) => {
+      $('.olt tr td:nth-child(2) a').each(function() {
+          const $this = $(this)
+          var author = $this.text() || $this.innerText
+          const isBlackUser = name => (config.blackUserList || []).find(keyword => name.indexOf(keyword) >= 0);
+          if (isBlackUser(author)) {
+            console.log("屏蔽首页发帖:" + author);
+            $this.parents('tr').hide();
+          }
+        })
+    }
+
     // filt user in black list
     const runFilterBlackUser = (config, self) => {
       const userName = self.find('h4 a')[0].innerText;
@@ -219,14 +232,18 @@
           runFilterBlackUser(config, $this);
         });
         runAddJumptoButton(global);
-      } else {
+      }
+      else {
         // 帖子列表
-        $('.topics .td-subject a, .title a').each(function() {
+        $('.olt .title a').each(function() {
           const $this = $(this);
           runFilter(config, $this);
           runOpenInNewTab(config, $this);
           runShowFullTitle(config, $this);
         });
+        // 帖子列表-作者
+        runFiltAuthor(config);
+
         runFadeVisitedTitle(config);
       }
     }
@@ -465,7 +482,8 @@
     return {
       init,
       destory,
-      _version: '0.2.1.0'
+      // 版本控制
+      _version: '0.1.2'
     }
   }
 

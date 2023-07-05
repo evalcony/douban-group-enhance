@@ -3,7 +3,7 @@
 // @version      0.1.0
 // @license      MIT
 // @namespace    https://evalcony.github.io/
-// @description  豆瓣小组展示功能增强：黑名单用户回帖屏蔽；高亮包含指定关键字的帖子；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转
+// @description  豆瓣小组展示功能增强：黑名单用户回帖屏蔽；黑名单用户发帖屏蔽；高亮包含指定关键字的帖子；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转
 // 原作者@author       tcatche
 // @author		 evalcony
 // @match        https://www.douban.com/group/*

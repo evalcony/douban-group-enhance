@@ -1,27 +1,27 @@
 // ==UserScript==
 // @name         豆瓣小组功能增强
-// @version      0.2.0.1
+// @version      0.1.0
 // @license      MIT
-// @namespace    https://tcatche.github.io/
-// @description  豆瓣小组展示功能增强：高亮包含指定关键字的帖子；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转
-// @author       tcatche
+// @namespace    https://evalcony.github.io/
+// @description  豆瓣小组展示功能增强：黑名单用户回帖屏蔽；高亮包含指定关键字的帖子；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转
+// 原作者@author       tcatche
+// @author		 evalcony
 // @match        https://www.douban.com/group/*
-// @homepageURL  https://github.com/tcatche/douban-group-enhance
-// @supportURL   https://github.com/tcatche/douban-group-enhance/issues
-// @downloadURL  https://github.com/tcatche/douban-group-enhance/blob/master/index.js
-// @updateURL    https://github.com/tcatche/douban-group-enhance/blob/master/index.js
+// @homepageURL  https://github.com/evalcony/douban-group-enhance
+// @supportURL   https://github.com/evalcony/douban-group-enhance/issues
+// @downloadURL  https://github.com/evalcony/douban-group-enhance/blob/master/index.js
+// @updateURL    https://github.com/evalcony/douban-group-enhance/blob/master/index.js
 // @grant        none
 // ==/UserScript==
 (function() {
-  const enhancer = () => {
+  const utils = {
     // save user config
-    const saveConfig = config => {
+    saveConfig: config => {
       const configString = JSON.stringify(config);
       localStorage.setItem('douban_group_enhance_config', configString);
-    }
-  
+    },
     // load user config
-    const getConfig = () => {
+    getConfig: () => {
       const configString = localStorage.getItem('douban_group_enhance_config');
       const oldConfigString = localStorage.getItem('douban_group_filter_config');
       try {
@@ -30,8 +30,23 @@
       } catch (e) {
         return {};
       }
+    },
+    bindedEles: [],
+    bindClick: function(selector, callback) {
+      this.bindedEles.push(selector);
+      $(selector).click(callback);
+    },
+    unbindClick: (selector) => {
+      $(selector).unbind();
+    },
+    unbindAllClick: function() {
+      this.bindedEles.forEach(selector => {
+        $(selector).click(callback);
+      })
     }
-  
+  }
+  const createEnhancer = () => {
+
     // run user filters
     const runFilter = (config, self) => {
       const title = self.attr('title') || '';
@@ -46,14 +61,14 @@
         self.parents('tr').hide();
       }
     }
-  
+
     // open in new tab
     const runOpenInNewTab = (config, self) => {
       if (config.openInNewTab) {
         self.attr('target', '_blank');
       }
     }
-  
+
     // show full title without cliped!
     const runShowFullTitle = (config, self) => {
       if (config.showFullTitle) {
@@ -67,7 +82,7 @@
       if (config.fadeVisited) {
         if ($('#fadeVisitedStyle').length === 0) {
           $('body').append(`
-            <style id="fadeVisitedStyle">
+            <style id="fadeVisitedStyle" class="douban_group_added">
               .topics .td-subject a:visited,
               .title a:visited {
                 color: #ddd
@@ -83,7 +98,7 @@
         $('#fadeVisitedStyle').remove();
       }
     }
-  
+
     // show reply number
     const runShowReplyNumber = (options, self, index) => {
       if (options.config.showReplyNumber) {
@@ -92,14 +107,14 @@
         if (!isInserted) {
           const start = +(options.params.start || 0);
           const replayNumber = start + 1 + index;
-          $(replyHead).append(`<span class="douban_group_enhance_replay_tag douban_group_enhance_replay_number">${replayNumber}楼</span>`);
+          $(replyHead).append(`<span class="douban_group_enhance_replay_tag douban_group_enhance_replay_number douban_group_added">${replayNumber}楼</span>`);
         }
       } else {
         $('.douban_group_enhance_replay_number').remove();
       }
     }
-  
-    // show if is topic owner 
+
+    // show if is topic owner
     const runShowOwnerTag = (options, self) => {
       if (options.config.showOwnerTag) {
         const replyHead = self.find('h4')[0];
@@ -107,21 +122,44 @@
         if (!isInserted) {
           const replyName = self.find('h4 a').text().trim();
           if (replyName === options.topicUser) {
-            $(replyHead).append('<span class="douban_group_enhance_replay_tag douban_group_enhance_owner_tag">楼主</span>');
+            $(replyHead).append('<span class="douban_group_enhance_replay_tag douban_group_enhance_owner_tag douban_group_added">楼主</span>');
           }
         }
       } else {
         $('.douban_group_enhance_owner_tag').remove();
       }
     }
-  
+
+    // filt user in black list
+    const runFilterBlackUser = (config, self) => {
+      const userName = self.find('h4 a')[0].innerText;
+      const isBlackUser = name => (config.blackUserList || []).find(keyword => name.indexOf(keyword) >= 0);
+      if (isBlackUser(userName)) {
+        console.log("屏蔽发帖人: " + userName);
+        self.hide();
+        return;
+      }
+
+
+      var replyQuote = self.find('.reply-quote');
+      if (replyQuote != null) {
+        var pubdate = replyQuote.find('.reply-quote-content .pubdate a')
+        const replyedUserName = pubdate.innerText || pubdate.text();
+        if (isBlackUser(replyedUserName)) {
+          console.log("屏蔽回复: " + replyedUserName);
+          self.hide();
+          return;
+        }
+      }
+    }
+
     // add jump to top, comments and pager button
     const runAddJumptoButton = options => {
       if (options.config.jumpTo) {
         const isAdded = $('#douban_group_enhance_jump').length > 0;
         if (!isAdded) {
           $(document.body).append(`
-            <div class="douban_group_enhance_jump">
+            <div id="douban_group_enhance_jump" class="douban_group_enhance_jump douban_group_added">
               跳转到:
               <span class="douban_group_enhance_jump_target douban_group_enhance_jump_target_title">标题</span>/
               <span class="douban_group_enhance_jump_target douban_group_enhance_jump_target_comments">评论</span>/
@@ -129,13 +167,13 @@
             </div>
           `);
           setTimeout(() => {
-            $('.douban_group_enhance_jump_target_title').click(() => {
+            utils.bindClick('.douban_group_enhance_jump_target_title', e => {
               $('h1')[0].scrollIntoView({behavior: 'smooth'});
             });
-            $('.douban_group_enhance_jump_target_comments').click(() => {
-              $('#comments')[0].scrollIntoView({behavior: 'smooth'});
+            utils.bindClick('.douban_group_enhance_jump_target_comments', e => {
+              $('.topic-reply ')[0].scrollIntoView({behavior: 'smooth'});
             });
-            $('.douban_group_enhance_jump_target_end').click(() => {
+            utils.bindClick('.douban_group_enhance_jump_target_end', e => {
               $('#footer')[0].scrollIntoView({behavior: 'smooth'});
             });
           }, 0)
@@ -144,7 +182,16 @@
         $('.douban_group_enhance_jump').remove();
       }
     }
-  
+
+    // run remove google ads
+    const runRemoveAd = options => {
+      if (options.config.removeAd) {
+        setTimeout(function() {
+          $('[ad-status]').remove()
+        })
+      }
+    }
+
     const runEnhancer = config => {
       const isTopicDetailPage = location.pathname.indexOf('/group/topic/') >= 0;
       const search = location.search  ? location.search.substr(1) : '';
@@ -159,7 +206,9 @@
         config: config,
         params: params,
       };
-  
+
+      runRemoveAd(global);
+
       if (isTopicDetailPage) {
         // 帖子内容
         $('#comments li').each(function(index) {
@@ -167,6 +216,7 @@
           const $this = $(this);
           runShowReplyNumber(global, $this, index);
           runShowOwnerTag(global, $this);
+          runFilterBlackUser(config, $this);
         });
         runAddJumptoButton(global);
       } else {
@@ -184,17 +234,24 @@
     const initDom = () => {
       // init config dom
       let configDivHtml = `
-        <div id="douban_group_enhance_container" class="douban_group_enhance">
+        <div id="douban_group_enhance_container" class="douban_group_enhance douban_group_added">
           <div class="douban_group_enhance_mask"></div>
           <div class="douban_group_enhance_inner">
             <div class="douban_group_enhance_inner_content">
-              <h1>小组帖子过滤设置</h1>
+              <h1>小组优化设置</h1>
+              <h2>通用设置</h2>
+              <div class="douban_group_enhance_config_block">
+                <input type="checkbox" id="removeAd" value="1">
+                勾选则去广告
+              </div>
               <h2>帖子列表页优化</h2>
               <div class="douban_group_enhance_config_block">请填入要高亮的关键字，多个关键字用空格隔开：</div>
               <textarea placeholder="请填入要高亮的关键字，多个关键字用空格隔开"></textarea>
               <br />
               <div class="douban_group_enhance_config_block">请填入要排除的关键字，多个关键字用空格隔开：</div>
               <textarea placeholder="请填入要排除的关键字，多个关键字用空格隔开 "></textarea>
+              <div class="douban_group_enhance_config_block">请填入要屏蔽的用户名，多个用户名用空格隔开：</div>
+              <textarea placeholder="请填入要屏蔽的用户名，多个用户名用空格隔开"></textarea>
               <div class="douban_group_enhance_config_block">
                 <input type="checkbox" id="openInNewTab" value="1">
                 勾选则使用新标签打开帖子
@@ -230,7 +287,7 @@
         </textarea>
       `;
       let styleHtml = `
-        <style>
+        <style id="douban_group_enhance_style" class="douban_group_added">
           .douban_group_enhance_config {
             color: #ca6445;
             padding: 5px 20px;
@@ -301,7 +358,7 @@
           .douban_group_enhance_replay_tag {
             float: right;
             color: #666;
-            padding: 0 10px;
+            padding: 0 5px;
           }
           .douban_group_enhance_button {
             padding: 5px 20px;
@@ -336,11 +393,11 @@
       `;
       $(document.body).append(configDivHtml);
       $(document.body).append(styleHtml);
-      
+
       // init config btn
       const insertPos = $('#db-global-nav .top-nav-doubanapp');
       if (insertPos && insertPos[0]) {
-        $(insertPos[0]).after('<div id="douban_group_enhance_config" class="top-nav-doubanapp"><span class="douban_group_enhance_button">小组增强插件设置</span></div>');
+        $(insertPos[0]).after('<div id="douban_group_enhance_config" class="top-nav-doubanapp douban_group_added"><span class="douban_group_enhance_button">小组增强插件设置</span></div>');
       }
     }
     // init dom events
@@ -348,31 +405,33 @@
       const $contain = $('#douban_group_enhance_container');
       const $body = $(document.body);
       // bind events
-      $('#douban_group_enhance_config').click(e => {
+      utils.bindClick('#douban_group_enhance_config', e => {
         $contain.show();
         $body.css('overflow', 'hidden');
       });
-      $('#douban_group_enhance_sure').click(e => {
+      utils.bindClick('#douban_group_enhance_cancel', e => {
+        $contain.hide();
+        $body.css('overflow', 'initial');
+      });
+      utils.bindClick('.douban_group_enhance_mask', e => {
+        $contain.hide();
+        $body.css('overflow', 'initial');
+      });
+      utils.bindClick('#douban_group_enhance_sure', e => {
         const config = {
           include: $('#douban_group_enhance_container textarea')[0].value.split(' ').filter(v => !!v),
           declude: $('#douban_group_enhance_container textarea')[1].value.split(' ').filter(v => !!v),
+          blackUserList: $('#douban_group_enhance_container textarea')[2].value.split(' ').filter(v => !!v),
           openInNewTab: $('#openInNewTab')[0].checked,
           showFullTitle: $('#showFullTitle')[0].checked,
           showReplyNumber: $('#showReplyNumber')[0].checked,
           showOwnerTag: $('#showOwnerTag')[0].checked,
           fadeVisited: $('#fadeVisited')[0].checked,
           jumpTo: $('#jumpTo')[0].checked,
+          removeAd: $('#removeAd')[0].checked,
         }
-        saveConfig(config);
+        utils.saveConfig(config);
         runEnhancer(config);
-        $contain.hide();
-        $body.css('overflow', 'initial');
-      });
-      $('#douban_group_enhance_cancel').click(e => {
-        $contain.hide();
-        $body.css('overflow', 'initial');
-      });
-      $('.douban_group_enhance_mask').click(e => {
         $contain.hide();
         $body.css('overflow', 'initial');
       });
@@ -381,24 +440,50 @@
     const initDomValue = config => {
       $('#douban_group_enhance_container textarea')[0].value = (config.include || []).join(' ');
       $('#douban_group_enhance_container textarea')[1].value = (config.declude || []).join(' ');
+      $('#douban_group_enhance_container textarea')[2].value = (config.blackUserList || []).join(' ');
       $('#openInNewTab')[0].checked = config.openInNewTab;
       $('#showFullTitle')[0].checked = config.showFullTitle;
       $('#showReplyNumber')[0].checked = config.showReplyNumber;
       $('#showOwnerTag')[0].checked = config.showOwnerTag;
       $('#fadeVisited')[0].checked = config.fadeVisited;
       $('#jumpTo')[0].checked = config.jumpTo;
+      $('#removeAd')[0].checked = config.removeAd;
     }
     const init = () => {
-      const config = getConfig() || {};
+      const config = utils.getConfig() || {};
       initDom();
       initDomValue(config);
       initDomEvents();
       runEnhancer(config);
     }
+    const destory = () => {
+      // remove dom events
+      utils.unbindAllClick();
+      // remove all added elements
+      $('#.douban_group_added').remove();
+    }
     return {
-      init
+      init,
+      destory,
+      _version: '0.2.1.0'
     }
   }
 
-  enhancer().init();
+  // init
+  if (window.doubanEnhancer) {
+    const enhancer = createEnhancer();
+    if (!doubanEnhancer._version) {
+      doubanEnhancer._version = '0'
+    }
+    if (window.doubanEnhancer._version < enhancer._version) {
+      if (doubanEnhancer.destory) {
+        doubanEnhancer.destory();
+      }
+      window.doubanEnhancer = enhancer;
+      doubanEnhancer.init();
+    }
+  } else {
+    window.doubanEnhancer = createEnhancer();
+    doubanEnhancer.init();
+  }
 })();

@@ -12,8 +12,8 @@
 
 ## 功能
 主要功能有：
-- 屏蔽黑名单用户的回帖+被回帖
-- 屏蔽首页黑名单用户的发帖
+- 屏蔽帖子内黑名单用户的回帖+被回帖
+- 屏蔽首页帖子列表中黑名单用户的发帖
 - 高亮包含指定关键字的帖子
 - 隐藏包含指定关键字的帖子
 - 去除标题省略号，展示全部文本
@@ -37,7 +37,7 @@
 **包含摄影的帖子已经被高亮，而包含武汉的帖子已被隐藏。**
 
 ## 问题反馈与功能增加
-[Issues](https://github.com/evalcony/douban-group-filter/issues)
+[Issues](https://github.com/evalcony/douban-group-enhance/issues)
 
 ## 协议
 [MIT](./LICENSE)

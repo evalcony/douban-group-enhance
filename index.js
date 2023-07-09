@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         豆瓣小组功能增强-v2
-// @version      0.1.3.1
+// @version      0.1.3.2
 // @license      MIT
 // @namespace    https://evalcony.github.io/
-// @description  豆瓣小组功能增强：指定用户回帖屏蔽；指定用户发帖屏蔽；在帖子内对指定用户高亮；高亮包含指定关键字的帖子；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转。PS：在原作者 tcatche 版本基础上，添加新功能，特此声明。
+// @description  豆瓣小组功能增强：指定用户回帖屏蔽；指定用户发帖屏蔽；在帖子内对指定用户高亮；高亮包含指定关键字的帖子；是否屏蔽对指定用户的回复；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转。PS：在原作者 tcatche 版本基础上，添加新功能，特此声明。
 // 原作者@author       tcatche
 // @author		 evalcony
 // @match        https://www.douban.com/group/*
@@ -153,15 +153,17 @@
         return;
       }
 
-
-      var replyQuote = self.find('.reply-quote');
-      if (replyQuote != null) {
-        var pubdate = replyQuote.find('.reply-quote-content .pubdate a')
-        const replyedUserName = pubdate.innerText || pubdate.text();
-        if (isBlackUser(replyedUserName)) {
-          console.log("屏蔽回复: " + replyedUserName);
-          self.hide();
-          return;
+      const isFiltBeReplyedUser = config.filtBeReplyedBlackUser
+      if (isFiltBeReplyedUser) {
+        var replyQuote = self.find('.reply-quote');
+        if (replyQuote != null) {
+          var pubdate = replyQuote.find('.reply-quote-content .pubdate a')
+          const replyedUserName = pubdate.innerText || pubdate.text();
+          if (isBlackUser(replyedUserName)) {
+            console.log("屏蔽回复: " + replyedUserName);
+            self.hide();
+            return;
+          }
         }
       }
     }
@@ -322,6 +324,10 @@
                 <input type="checkbox" id="jumpTo" value="1">
                 勾选则添加跳转到标题、评论、页码位置的按钮(在屏幕左下角)
               </div>
+              <div class="douban_group_enhance_config_block">
+                <input type="checkbox" id="filtBeReplyedBlackUser" checked ='checked'value="1">
+                勾选则屏蔽对指定用户的回复（即他人回复此人）
+              </div>
               <p class="douban_group_enhance_buttons">
                 <button id="douban_group_enhance_sure" class="douban_group_enhance_button">确定</button>
                 <button id="douban_group_enhance_cancel" class="douban_group_enhance_button" >取消</button>
@@ -474,6 +480,7 @@
           fadeVisited: $('#fadeVisited')[0].checked,
           jumpTo: $('#jumpTo')[0].checked,
           removeAd: $('#removeAd')[0].checked,
+          filtBeReplyedBlackUser: $('#filtBeReplyedBlackUser')[0].checked,
         }
         utils.saveConfig(config);
         runEnhancer(config);
@@ -494,6 +501,7 @@
       $('#fadeVisited')[0].checked = config.fadeVisited;
       $('#jumpTo')[0].checked = config.jumpTo;
       $('#removeAd')[0].checked = config.removeAd;
+      $('#filtBeReplyedBlackUser')[0].checked = config.filtBeReplyedBlackUser;
     }
     const init = () => {
       const config = utils.getConfig() || {};
@@ -512,7 +520,7 @@
       init,
       destory,
       // 版本控制
-      _version: '0.1.3.1'
+      _version: '0.1.3.2'
     }
   }
 

@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         豆瓣小组功能增强
-// @version      0.1.0
+// @name         豆瓣小组功能增强-v2
+// @version      0.1.3.1
 // @license      MIT
 // @namespace    https://evalcony.github.io/
-// @description  豆瓣小组展示功能增强：黑名单用户回帖屏蔽；黑名单用户发帖屏蔽；高亮包含指定关键字的帖子；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转
+// @description  豆瓣小组功能增强：指定用户回帖屏蔽；指定用户发帖屏蔽；在帖子内对指定用户高亮；高亮包含指定关键字的帖子；隐藏包含指定关键字的帖子；去除标题省略号，展示全部文本；新标签页打开帖子;展示是否是楼主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转主的标识;展示楼层号；淡化已读帖子标题；增加帖子内内容跳转。PS：在原作者 tcatche 版本基础上，添加新功能，特此声明。
 // 原作者@author       tcatche
 // @author		 evalcony
 // @match        https://www.douban.com/group/*
@@ -130,14 +130,14 @@
       }
     }
 
-    // filt author
-    const runFiltAuthor = (config) => {
+    // filt user
+    const runFiltUser = (config) => {
       $('.olt tr td:nth-child(2) a').each(function() {
           const $this = $(this)
-          var author = $this.text() || $this.innerText
+          var user = $this.text() || $this.innerText
           const isBlackUser = name => (config.blackUserList || []).find(keyword => name.indexOf(keyword) >= 0);
-          if (isBlackUser(author)) {
-            console.log("屏蔽首页发帖:" + author);
+          if (isBlackUser(user)) {
+            console.log("屏蔽首页发帖:" + user);
             $this.parents('tr').hide();
           }
         })
@@ -161,6 +161,29 @@
         if (isBlackUser(replyedUserName)) {
           console.log("屏蔽回复: " + replyedUserName);
           self.hide();
+          return;
+        }
+      }
+    }
+
+    // hightlight user 将帖子内的指定用户名高亮
+    const runHightlightUser = (config, self) => {
+      const userName = self.find('h4 a')[0].innerText;
+      const isHightlightUser = name => (config.highlightUserList || []).find(keyword => name.indexOf(keyword) >= 0);
+      if (isHightlightUser(userName)) {
+        console.log("高亮发帖人: " + userName);
+        self.find('h4 a').addClass('douban_group_enhance_highlight');
+        return;
+      }
+
+
+      const replyQuote = self.find('.reply-quote');
+      if (replyQuote != null) {
+        var pubdate = replyQuote.find('.reply-quote-content .pubdate a')
+        const replyedUserName = pubdate.innerText || pubdate.text();
+        if (isHightlightUser(replyedUserName)) {
+          console.log("高亮回复: " + replyedUserName);
+          pubdate.addClass('douban_group_enhance_highlight');
           return;
         }
       }
@@ -229,7 +252,8 @@
           const $this = $(this);
           runShowReplyNumber(global, $this, index);
           runShowOwnerTag(global, $this);
-          runFilterBlackUser(config, $this);
+          runFilterBlackUser(config, $this); // 帖子内屏蔽用户
+          runHightlightUser(config, $this); // 帖子内高亮用户
         });
         runAddJumptoButton(global);
       }
@@ -242,7 +266,7 @@
           runShowFullTitle(config, $this);
         });
         // 帖子列表-作者
-        runFiltAuthor(config);
+        runFiltUser(config); // 帖子列表屏蔽用户
 
         runFadeVisitedTitle(config);
       }
@@ -269,6 +293,9 @@
               <textarea placeholder="请填入要排除的关键字，多个关键字用空格隔开 "></textarea>
               <div class="douban_group_enhance_config_block">请填入要屏蔽的用户名，多个用户名用空格隔开：</div>
               <textarea placeholder="请填入要屏蔽的用户名，多个用户名用空格隔开"></textarea>
+              <div class="douban_group_enhance_config_block">请填入要高亮的用户名，多个用户名用空格隔开：</div>
+              <textarea placeholder="请填入要高亮的用户名，多个用户名用空格隔开"></textarea>
+              
               <div class="douban_group_enhance_config_block">
                 <input type="checkbox" id="openInNewTab" value="1">
                 勾选则使用新标签打开帖子
@@ -439,6 +466,7 @@
           include: $('#douban_group_enhance_container textarea')[0].value.split(' ').filter(v => !!v),
           declude: $('#douban_group_enhance_container textarea')[1].value.split(' ').filter(v => !!v),
           blackUserList: $('#douban_group_enhance_container textarea')[2].value.split(' ').filter(v => !!v),
+          highlightUserList: $('#douban_group_enhance_container textarea')[3].value.split(' ').filter(v => !!v),
           openInNewTab: $('#openInNewTab')[0].checked,
           showFullTitle: $('#showFullTitle')[0].checked,
           showReplyNumber: $('#showReplyNumber')[0].checked,
@@ -458,6 +486,7 @@
       $('#douban_group_enhance_container textarea')[0].value = (config.include || []).join(' ');
       $('#douban_group_enhance_container textarea')[1].value = (config.declude || []).join(' ');
       $('#douban_group_enhance_container textarea')[2].value = (config.blackUserList || []).join(' ');
+      $('#douban_group_enhance_container textarea')[3].value = (config.highlightUserList || []).join(' ');
       $('#openInNewTab')[0].checked = config.openInNewTab;
       $('#showFullTitle')[0].checked = config.showFullTitle;
       $('#showReplyNumber')[0].checked = config.showReplyNumber;
@@ -483,7 +512,7 @@
       init,
       destory,
       // 版本控制
-      _version: '0.1.2'
+      _version: '0.1.3.1'
     }
   }
 
